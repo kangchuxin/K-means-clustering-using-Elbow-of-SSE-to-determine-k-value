@@ -1,0 +1,54 @@
+import pandas as pd
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+from sklearn.impute import SimpleImputer
+import matplotlib.pyplot as plt
+
+# 加载数据
+try:
+    df = pd.read_csv('ad_performance.csv')
+except FileNotFoundError:
+    print("错误：未找到 'ad_performance.csv' 文件，请检查文件路径。")
+    exit(1)
+
+# 提取特征
+X = df
+
+# 处理缺失值，使用均值填充
+imputer = SimpleImputer(strategy='mean')
+X_imputed = imputer.fit_transform(X)
+
+# 数据标准化
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X_imputed)
+
+# 手肘法计算不同簇数量下的 SSE
+sse = []
+for k in range(1, 11):
+    kmeans = KMeans(n_clusters=k, random_state=42)
+    kmeans.fit(X_scaled)
+    sse.append(kmeans.inertia_)
+
+# 绘制手肘图
+plt.figure(figsize=(8, 5))
+plt.plot(range(1, 11), sse, marker='o')
+plt.title('手肘法确定最佳簇数量')
+plt.xlabel('簇数量')
+plt.xticks(rotation=45)
+plt.ylabel('SSE')
+plt.show()
+
+# 根据手肘图，选择最佳簇数量
+best_k = 4
+
+# 使用最佳簇数量进行 K-Means 聚类
+kmeans = KMeans(n_clusters=best_k, random_state=42)
+df['Cluster'] = kmeans.fit_predict(X_scaled)
+
+# 保存结果到新的 CSV 文件
+try:
+    df.to_csv('ad_performance_clustered.csv', index=False)
+    print("聚类结果已保存到 'ad_performance_clustered.csv' 文件。")
+except Exception as e:
+    print(f"保存文件时出错：{e}")
+    
